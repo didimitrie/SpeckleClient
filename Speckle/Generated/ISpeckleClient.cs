@@ -23,6 +23,14 @@ namespace SpeckleClient
             GetMyProfileOperation operation,
             CancellationToken cancellationToken = default);
 
+        Task<IOperationResult<IUserEdit>> UserEditAsync(
+            Optional<UserEditInput> user = default,
+            CancellationToken cancellationToken = default);
+
+        Task<IOperationResult<IUserEdit>> UserEditAsync(
+            UserEditOperation operation,
+            CancellationToken cancellationToken = default);
+
         Task<IOperationResult<IGetStream>> GetStreamAsync(
             Optional<string> id = default,
             CancellationToken cancellationToken = default);

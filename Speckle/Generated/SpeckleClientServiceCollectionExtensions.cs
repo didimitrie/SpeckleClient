@@ -36,6 +36,7 @@ namespace SpeckleClient
             serviceCollection.TryAddSingleton<IOperationExecutorPool, OperationExecutorPool>();
 
             serviceCollection.AddDefaultScalarSerializers();
+            serviceCollection.AddInputSerializers();
             serviceCollection.AddResultParsers();
 
             serviceCollection.TryAddDefaultOperationSerializer();
@@ -58,6 +59,12 @@ namespace SpeckleClient
         }
 
 
+        private static IServiceCollection AddInputSerializers(
+            this IServiceCollection serviceCollection)
+        {
+            serviceCollection.AddSingleton<IValueSerializer, UserEditInputSerializer>();
+            return serviceCollection;
+        }
 
         private static IServiceCollection AddResultParsers(
             this IServiceCollection serviceCollection)
@@ -65,6 +72,7 @@ namespace SpeckleClient
             serviceCollection.AddSingleton<IResultParserResolver, ResultParserResolver>();
             serviceCollection.AddSingleton<IResultParser, GetServerInfoResultParser>();
             serviceCollection.AddSingleton<IResultParser, GetMyProfileResultParser>();
+            serviceCollection.AddSingleton<IResultParser, UserEditResultParser>();
             serviceCollection.AddSingleton<IResultParser, GetStreamResultParser>();
             return serviceCollection;
         }

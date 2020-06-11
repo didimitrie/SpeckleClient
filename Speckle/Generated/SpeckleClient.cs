@@ -61,6 +61,32 @@ namespace SpeckleClient
             return _executor.ExecuteAsync(operation, cancellationToken);
         }
 
+        public Task<IOperationResult<IUserEdit>> UserEditAsync(
+            Optional<UserEditInput> user = default,
+            CancellationToken cancellationToken = default)
+        {
+            if (user.HasValue && user.Value is null)
+            {
+                throw new ArgumentNullException(nameof(user));
+            }
+
+            return _executor.ExecuteAsync(
+                new UserEditOperation { User = user },
+                cancellationToken);
+        }
+
+        public Task<IOperationResult<IUserEdit>> UserEditAsync(
+            UserEditOperation operation,
+            CancellationToken cancellationToken = default)
+        {
+            if (operation is null)
+            {
+                throw new ArgumentNullException(nameof(operation));
+            }
+
+            return _executor.ExecuteAsync(operation, cancellationToken);
+        }
+
         public Task<IOperationResult<IGetStream>> GetStreamAsync(
             Optional<string> id = default,
             CancellationToken cancellationToken = default)

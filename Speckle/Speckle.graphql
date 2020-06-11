@@ -1,4 +1,4 @@
-ealschema {
+schema {
   query: Query
   mutation: Mutation
 }

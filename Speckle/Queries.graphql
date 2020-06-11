@@ -19,6 +19,10 @@ query getMyProfile{
   }
 }
 
+mutation userEdit($user: UserEditInput!) {
+  userEdit(user: $user)
+}
+
 query getStream($id: String!) {
   stream(id: $id){
     name
