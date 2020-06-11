@@ -1,0 +1,331 @@
+ealschema {
+  query: Query
+  mutation: Mutation
+}
+
+type Query {
+  "Stare into the void."
+  _: String
+  serverApp(id: String!): ServerApp
+  serverInfo: ServerInfo!
+  stream(id: String!): Stream
+  "Gets the profile of a user. If no id argument is provided, will return the current authenticated user's profile (as extracted from the authorization header)."
+  user(id: String): User
+  userPwdStrength(pwd: String!): JSONObject
+}
+
+type ServerApp {
+  id: String!
+  name: String!
+  author: String!
+  ownerId: String
+  createdAt: String!
+  firstparty: Boolean!
+  redirectUrl: String!
+  scopes: [Scope]
+}
+
+"Available scopes."
+type Scope {
+  name: String!
+  description: String!
+}
+
+"Information about this server."
+type ServerInfo {
+  name: String!
+  company: String
+  description: String
+  adminContact: String
+  canonicalUrl: String
+  termsOfService: String
+  roles: [Role]!
+  scopes: [Scope]!
+  authStrategies: [AuthStrategy]
+}
+
+"Available roles."
+type Role {
+  name: String!
+  description: String!
+  resourceTarget: String!
+}
+
+type AuthStrategy {
+  id: String!
+  name: String!
+  icon: String!
+  url: String!
+  color: String
+}
+
+type Stream {
+  id: String!
+  name: String!
+  description: String
+  isPublic: Boolean!
+  clonedFrom: Stream
+  createdAt: String!
+  updatedAt: String!
+  "All the users with access to this stream."
+  users: [User]!
+  role: String
+  commits(offset: Int! = 0 limit: Int = 20): CommitCollection
+  commit(id: String!): Object!
+  tags(offset: Int = 0 limit: Int = 20): TagCollection
+  tag(id: String!): Tag
+  branches(offset: Int = 0 limit: Int = 20): BranchCollection
+  branch(id: String!): Branch
+}
+
+"Base user type."
+type User {
+  id: String!
+  username: String
+  email: String
+  name: String
+  bio: String
+  company: String
+  avatar: String
+  verified: Boolean
+  profiles: JSONObject
+  "Apps used by this user."
+  apps: [ServerApp]
+  "Returns a list of your personal api tokens."
+  apiTokens: [ApiToken]
+  "All the streams that a user has access to."
+  streamCollection(offset: Int! = 0 limit: Int! = 100): StreamCollection
+  "The role this user has on a specific stream (can be populated when accessing a stream's users)."
+  role: String
+}
+
+"The `JSONObject` scalar type represents JSON objects as specified by [ECMA-404](http:\/\/www.ecma-international.org\/publications\/files\/ECMA-ST\/ECMA-404.pdf)."
+scalar JSONObject
+
+type ApiToken {
+  id: String!
+  name: String!
+  lastChars: String!
+  scopes: [String]!
+  createdAt: String!
+  lifespan: BigInt!
+  lastUsed: String!
+}
+
+"The `BigInt` scalar type represents non-fractional signed whole numeric values."
+scalar BigInt
+
+type StreamCollection {
+  totalCount: Int!
+  streams: [Stream]
+}
+
+type CommitCollection {
+  totalCount: Int
+  commits: [Object]
+}
+
+type Object {
+  id: String!
+  speckleType: String!
+  applicationId: String
+  createdAt: DateTime
+  totalChildrenCount: Int
+  "The object's description. Valid only in the case of commit objects."
+  description: String
+  "The object's creator. Valid only in the case of commit objects."
+  author: User
+  "Any tags that this object belongs to. Valid only in the case of commit objects."
+  tag: [Tag]
+  "Any branches that this object belongs to. Valid only in the case of commit objects."
+  branch: [Branch]
+  "The full object, with all its props & other things. **NOTE:** If you're requesting objects for the purpose of recreating & displaying, you probably only want to request this specific field."
+  data: JSONObject
+  "Get any objects that this object references. In the case of commits, this will give you a commit's constituent objects.\n\n**NOTE**: Providing any of the two last arguments ( `query`, `orderBy` ) will trigger a different code branch that executes a much more expensive SQL query. It is not recommended to do so for basic clients that are interested in purely getting all the objects of a given commit."
+  children(limit: Int! = 100 depth: Int! = 50 select: [String] cursor: String query: [JSONObject!] orderBy: JSONObject): ObjectCollection!
+}
+
+type Tag implements Reference {
+  id: String!
+  type: REFERENCE_TYPE!
+  name: String!
+  author: User!
+  description: String!
+  createdAt: String
+  updatedAt: String
+  commit: Object
+}
+
+interface Reference {
+  id: String!
+  name: String!
+  type: REFERENCE_TYPE!
+  description: String!
+  author: User!
+  createdAt: String
+  updatedAt: String
+}
+
+enum REFERENCE_TYPE {
+  BRANCH
+  TAG
+}
+
+type Branch implements Reference {
+  id: String!
+  type: REFERENCE_TYPE!
+  name: String!
+  author: User!
+  description: String!
+  createdAt: String
+  updatedAt: String
+  commits(offset: Int! = 0 limit: Int! = 20): CommitCollection
+}
+
+type ObjectCollection {
+  totalCount: Int!
+  cursor: String
+  objects: [Object]!
+}
+
+type TagCollection {
+  totalCount: Int
+  tags: [Tag]
+}
+
+type BranchCollection {
+  totalCount: Int
+  branches: [Branch]
+}
+
+type Mutation {
+  "The void stares back."
+  _: String
+  "Authorizes an app on behalf of a user. Returns an access code that can be exchanged \nby the application for an api token."
+  appAuthorize(appId: String! challenge: String!): String!
+  "Exchanges an access code for an api token."
+  appGetToken(appId: String! appSecret: String! accesCode: String! challenge: String!): AppTokenResponse!
+  "Refreshes an expired token."
+  appRefreshToken(appId: String appSecret: String! refreshToken: String!): AppTokenResponse!
+  "Creates an personal api token."
+  apiTokenCreate(scopes: [String!]! name: String! lifespan: BigInt): String!
+  "Revokes (deletes) an personal api token."
+  apiTokenRevoke(token: String!): Boolean!
+  "Creates a special type of object, namely a commit. A commit is describes the particular shape of a data stream at one point in time. It's a collection of objects. \nReturns the hash of the commit."
+  commitCreate(streamId: String! commit: JSONObject!): String!
+  "Creates a bunch of objects and returns their hashes. Note: data duplication is respected. \nReturns the hashes of the stored objects."
+  objectCreate(streamId: String! objects: [JSONObject]!): [String]!
+  "Creates a branch."
+  branchCreate(streamId: String! branch: BranchCreateInput): String
+  "Updates a branch. If a commit id array is present, the two get merged."
+  branchUpdate(streamId: String! branch: BranchUpdateInput): Boolean!
+  "Deletes a branch."
+  branchDelete(streamId: String! branchId: String!): Boolean!
+  "Creates a tag."
+  tagCreate(streamId: String! tag: TagCreateInput): String!
+  "Updates a tag."
+  tagUpdate(streamId: String! tag: TagUpdateInput): Boolean!
+  "Deletes a tag."
+  tagDelete(streamId: String! tagId: String!): Boolean!
+  serverInfoUpdate(info: ServerInfoUpdateInput!): Boolean
+  streamCreate(stream: StreamInput!): String
+  streamUpdate(stream: StreamInput!): Boolean!
+  streamDelete(id: String!): Boolean!
+  "Clones a given stream, duplicating it within the current user's account without preserving access rights.\nNOTE: Not implemented yet"
+  streamClone(id: String!): Boolean!
+  "Grants permissions to an user on a given stream. "
+  streamGrantPermission(streamId: String! userId: String! role: String!): Boolean
+  "Revokes the permissions of an user on a given stream."
+  streamRevokePermission(streamId: String! userId: String!): Boolean
+  "Endpoint used to create an admin user on server init. \nTODO: Deprecate; update setup app to not use this one."
+  userCreateAdmin(user: UserCreateInput!): String
+  "Edits a user's profile."
+  userEdit(user: UserEditInput!): Boolean!
+}
+
+type AppTokenResponse {
+  "The actual bearer token."
+  token: String!
+  refreshToken: String!
+}
+
+input BranchCreateInput {
+  name: String!
+  description: String
+  commits: [String]
+}
+
+input BranchUpdateInput {
+  id: String!
+  name: String
+  description: String
+  commits: [String]
+}
+
+input TagCreateInput {
+  name: String!
+  description: String
+  commitId: String!
+}
+
+input TagUpdateInput {
+  id: String!
+  name: String
+  description: String
+  commitId: String
+}
+
+input ServerInfoUpdateInput {
+  name: String!
+  company: String
+  description: String
+  adminContact: String
+  canonicalUrl: String
+  termsOfService: String
+}
+
+input StreamInput {
+  id: String
+  name: String
+  description: String
+  isPublic: Boolean
+}
+
+input UserCreateInput {
+  name: String!
+  username: String!
+  email: String!
+  password: String!
+}
+
+input UserEditInput {
+  name: String
+  company: String
+  bio: String
+}
+
+scalar EmailAddress
+
+input CommitCreateInput {
+  "The stream against which these objects will be created. "
+  streamId: String!
+  "The commit you want to create."
+  commit: JSONObject!
+}
+
+input ObjectCreateInput {
+  "The stream against which these objects will be created. "
+  streamId: String!
+  "The objects you want to create."
+  objects: [JSONObject]!
+}
+
+enum CacheControlScope {
+  PUBLIC
+  PRIVATE
+}
+
+"The `Upload` scalar type represents a file upload."
+scalar Upload
+
+directive @cacheControl(maxAge: Int scope: CacheControlScope) on FIELD_DEFINITION | OBJECT | INTERFACE
